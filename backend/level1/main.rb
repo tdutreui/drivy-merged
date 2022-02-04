@@ -2,6 +2,7 @@ require 'json'
 require 'date'
 require '../code/car'
 require '../code/rental'
+require '../code/rental_service'
 
 input = JSON.parse(File.read('data/input.json'))
 output_filepath = 'data/output.json'
@@ -17,6 +18,6 @@ def find_car(car_id)
   @cars.find { |c| c.id == car_id }
 end
 
-output = { rentals: @rentals.map { |r| r.compute_price(find_car(r.car_id)) } }
+output = { rentals: @rentals.map { |r| r.car = find_car(r.car_id); RentalService.new(r).compute_price(format: :price,with_per_day_discount: false) } }
 File.write(output_filepath, output.to_json)
 
