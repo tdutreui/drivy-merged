@@ -3,6 +3,7 @@ require 'date'
 require '../code/car'
 require '../code/rental'
 require '../code/rental_service'
+require '../code/option'
 
 input = JSON.parse(File.read('data/input.json'))
 output_filepath = 'data/output.json'
