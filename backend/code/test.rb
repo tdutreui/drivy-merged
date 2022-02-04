@@ -1,7 +1,7 @@
 require 'json'
 
 
-levels=[1,2,3]
+levels=[1,2,3,4]
 levels.each do |id|
   output_filepath = "../level#{id}/data/output.json"
   expected_output_filepath = "../level#{id}/data/expected_output.json"

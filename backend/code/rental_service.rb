@@ -1,14 +1,11 @@
 class RentalService
-  attr_accessor :rental
+  attr_accessor :rental, :price
 
   def initialize(r)
     self.rental = r
   end
 
-  def compute_price(opts = {})
-    with_per_day_discount = opts.has_key?(:with_per_day_discount) ? opts[:with_per_day_discount] : true
-    format = opts[:format] || :price
-
+  def set_price(with_per_day_discount)
     car = rental.car
 
     if with_per_day_discount
@@ -17,19 +14,26 @@ class RentalService
       days_price = rental.duration_days * car.price_per_day
     end
     km_price = rental.distance * car.price_per_km
-    price = km_price + days_price
+    self.price = km_price + days_price
+  end
+
+  def compute_output(opts = {})
+    with_per_day_discount = opts.has_key?(:with_per_day_discount) ? opts[:with_per_day_discount] : true
+    format = opts[:format] || :price
+
+    set_price(with_per_day_discount)
 
     case format
     when :price
       {
         "id": rental.id,
-        "price": price
+        "price": @price
       }
     when :price_and_commission
-      commission = compute_commission_details(price)
+      commission = compute_commission_details
       {
         "id": rental.id,
-        "price": price,
+        "price": @price,
         "commission": commission
       }
     when :actions
@@ -40,6 +44,38 @@ class RentalService
     else
       raise "unknown format"
     end
+
+  end
+
+  def compute_actions
+    details = compute_commission_details
+    owner_amount = @price - details.values.sum
+    [
+      {
+        "who": "driver",
+        "type": "debit",
+        "amount": @price
+      },
+      {
+        "who": "owner",
+        "type": "credit",
+        "amount": owner_amount
+      },
+      {
+        "who": "insurance",
+        "type": "credit",
+        "amount": details[:insurance_fee]
+      },
+      {
+        "who": "assistance",
+        "type": "credit",
+        "amount": details[:assistance_fee]
+      },
+      {
+        "who": "drivy",
+        "type": "credit",
+        "amount": details[:drivy_fee]
+      }]
   end
 
   private
@@ -47,8 +83,8 @@ class RentalService
   #- half goes to the insurance
   #- 1€/day goes to the roadside assistance
   #- the rest goes to us
-  def compute_commission_details(price)
-    commission_price = price * 0.3
+  def compute_commission_details
+    commission_price = @price * 0.3
     insurance_fee = commission_price * 0.5
     assistance_fee = rental.duration_days * 100
     drivy_fee = commission_price - (insurance_fee + assistance_fee)
